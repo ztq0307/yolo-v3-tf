@@ -1,7 +1,13 @@
 # yolo-v3-tf
 you only look once build in tensorflow
 <br>
-# cite
+# Requirement
+<br>
+Tensorflow<br>
+Numpy<br>
+OpenCv<br>
+
+# Cite
 <br>
 @article{yolov3,<br>
   title={YOLOv3: An Incremental Improvement},<br>
