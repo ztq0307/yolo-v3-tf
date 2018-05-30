@@ -5,7 +5,7 @@ you only look once build in tensorflow
 <br>
 Tensorflow<br>
 Numpy<br>
-OpenCv<br>
+OpenCV<br>
 
 # Cite
 <br>
