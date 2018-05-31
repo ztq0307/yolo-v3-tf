@@ -66,7 +66,7 @@ class SOLVER(object):
         #
         self.c = tf.argmax(self.response, axis=-1)
         self.scores = tf.reduce_max(self.response, axis=-1)
-        self.mask = self.scores > 0.3
+        self.mask = self.scores > 0.5
         self.filter_c = tf.boolean_mask(self.c, self.mask)
         self.filter_scores = tf.boolean_mask(self.scores, self.mask)
         self.filter_box = tf.boolean_mask(self.box, self.mask)
@@ -80,6 +80,14 @@ class SOLVER(object):
         cimg = np.reshape(cimg, [1]+image_size)
         return img, cimg
 
+    def video_process(self, img):
+        img = cv2.resize(img, (image_size[0], image_size[1]))
+        cimg = np.copy(img)
+        cimg = cimg * 1.
+        cimg = cimg - VGG_MEAN
+        cimg = np.reshape(cimg, [1] + image_size)
+        return img, cimg
+
     def test(self, path):
         restore = tf.train.Saver()
         t1 = time.time()
@@ -88,17 +96,39 @@ class SOLVER(object):
         t2 = time.time()
         print('TAKES %f SECONDS RESTORE FILE FROM : '%(t2-t1),save_path)
         img, cimg = self.img_process(path)
+        img = cv2.resize(img, (600,600))
         cs, confs, bxs = self.sess.run([self.filter_c, self.filter_scores, self.filter_box], feed_dict={self.inputs:cimg, self.training:False})
+        cs, confs, bxs = box_filter(cs, confs, bxs )
         img = draw_result(img, cs,confs,bxs)
         cv2.imshow('w', img)
         cv2.waitKey()
 
+    def detect_capture(self):
+        restore = tf.train.Saver()
+        t1 = time.time()
+        print('RESTORE')
+        restore.restore(self.sess, save_path)
+        t2 = time.time()
+        print('TAKES %f SECONDS RESTORE FILE FROM : ' % (t2 - t1), save_path)
+        cap = cv2.VideoCapture(0)
+        success, frame = cap.read()
+        while success:
+            success, frame = cap.read()
+            img, cimg = self.video_process(frame)
+            cs, confs, bxs = self.sess.run([self.filter_c, self.filter_scores, self.filter_box],
+                                           feed_dict={self.inputs: cimg, self.training: False})
+            cs, confs, bxs = box_filter(cs, confs, bxs)
+            img = draw_result(img, cs, confs, bxs)
+            cv2.imshow('w', img)
+            cv2.waitKey(1)
+
+
+
 if __name__ == '__main__':
     solver = SOLVER()
     # print(solver.filter_c.shape, solver.conf_pred.shape, solver.box.shape)
-    solver.test('./image/test2.jpg')
-
-
+    # solver.test('./image/test3.jpg')
+    # solver.detect_capture()
 
 
 

@@ -97,11 +97,12 @@ class YOLO2(object):
 
             iou = cal_iou(pred_box_trans, loc_label)
             max_iou = tf.reduce_max(iou, axis=3, keep_dims=True)
-            iou_max = tf.cast(iou >= max_iou, tf.float32) * iou  # ioumask shape [0,13,13,5]
-            iou_mask = tf.cast(iou_max > iou_threshold, tf.float32) * center_response
+            # iou_max = tf.cast(iou >= max_iou, tf.float32) * iou  # ioumask shape [0,13,13,5]
+            iou_mask = tf.cast(max_iou >= iou_threshold, tf.float32) * center_response
 
-            # noobj_mask = tf.multiply(tf.ones_like(iou_mask) - iou_mask,(1 - center_response))
-            noobj_mask = tf.cast(iou < iou_lower, tf.float32) * (1 - center_response)
+            noobject_iou = (tf.ones_like(iou_mask) - iou_mask)*iou
+            noobj_mask = tf.cast(noobject_iou < iou_threshold, tf.float32)
+
             cla_loss = self.CLASS_SCALE * tf.reduce_sum(
                 tf.nn.softmax_cross_entropy_with_logits(logits=cla, labels=cla_label,
                                                         dim=4) * center_response) / batch_size
@@ -115,7 +116,8 @@ class YOLO2(object):
 
             tf.summary.scalar('obj_loss', obj_loss)
 
-            no_obj_loss = self.NOOBJECT_SCALE * tf.reduce_sum(tf.nn.sigmoid(conf) * noobj_mask) / batch_size
+            no_obj_loss = self.NOOBJECT_SCALE * tf.reduce_sum(
+                tf.square(tf.nn.sigmoid(conf) - 0) * noobj_mask) / batch_size
 
             tf.summary.scalar('no_obj_loss', no_obj_loss)
 
